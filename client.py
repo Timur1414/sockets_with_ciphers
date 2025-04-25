@@ -41,12 +41,16 @@ def main():
     bytes_key = key.encode('utf-8')
     number_key = int.from_bytes(bytes_key, 'big')
     initialize_vector = 'aaa'
+    bytes_initialize_vector = initialize_vector.encode('utf-8')
+    number_initialize_vector = int.from_bytes(bytes_initialize_vector, 'big')
 
     server_open_key = client.recv(buf_size)
     deserialized_server_open_key = pickle.loads(server_open_key)
 
     encrypted_key = str(rsa.encrypt(number_key, deserialized_server_open_key))
     client.send(encrypted_key.encode('utf-8'))
+    encrypted_initialize_vector = str(rsa.encrypt(number_initialize_vector, deserialized_server_open_key))
+    client.send(encrypted_initialize_vector.encode('utf-8'))
 
     message = input('Enter message: ')
     encrypted_message = encrypt_message_to_server(message, key, initialize_vector)

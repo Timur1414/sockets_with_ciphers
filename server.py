@@ -38,7 +38,6 @@ def main():
 
     open_key, close_key = rsa.generate_keys()
     buf_size = 1024
-    initialize_vector = 'aaa'
 
     connection, address = server.accept()
     serialized_open_key = pickle.dumps(open_key)
@@ -50,6 +49,11 @@ def main():
     bytes_key = number_key.to_bytes((number_key.bit_length() + 7) // 8, 'big')
     key = bytes_key.decode('utf-8')
     print(f'key: {key}')
+    data = connection.recv(buf_size)
+    message = int(data.decode('utf-8'))
+    number_initialize_vector = rsa.decrypt(message, close_key)
+    bytes_initialize_vector = number_initialize_vector.to_bytes((number_initialize_vector.bit_length() + 7) // 8, 'big')
+    initialize_vector = bytes_initialize_vector.decode('utf-8')
 
     data = connection.recv(buf_size)
     message = data.decode('utf-8')
