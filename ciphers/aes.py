@@ -97,7 +97,8 @@ class AES:
                 for j in range(4):  # применяем sbox
                     tmp[j] = AES.SBOX[tmp[j]]
                 for row in range(4):  # генерация нового раундового ключа
-                    key_schedule[row].append(key_schedule[row][col - AES.Nk] ^ tmp[row] ^ AES.RCON[row][col // AES.Nk - 1])
+                    key_schedule[row].append(
+                        key_schedule[row][col - AES.Nk] ^ tmp[row] ^ AES.RCON[row][col // AES.Nk - 1])
             else:  # раундовый ключ пока рано генерировать
                 for row in range(4):
                     key_schedule[row].append(key_schedule[row][col - AES.Nk] ^ key_schedule[row][col - 1])

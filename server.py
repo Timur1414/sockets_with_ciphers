@@ -53,7 +53,6 @@ class Server:
         print(f'Client {self.address} sent "{decrypted_message}"')
         return decrypted_message
 
-
     def send_message_to_client(self, message: str):
         encrypted_message = AES.encrypy_message(message, self.client_key, self.client_initialize_vector)
         self.connection.send(encrypted_message.encode('utf-8'))

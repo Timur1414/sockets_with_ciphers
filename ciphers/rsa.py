@@ -1,6 +1,7 @@
 from math import gcd
 from Crypto.Util.number import getPrime
 
+
 class RSA:
     BIT_LENGTH = 128
 
