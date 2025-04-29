@@ -21,7 +21,7 @@ class Client:
     def generate_keys(self):
         self.open_key, self.close_key = RSA.generate_keys()
 
-    def send_message_to_server(self):
+    def key_exchange(self):
         server_open_key = self.client.recv(self.buf_size)
         self.server_open_key = pickle.loads(server_open_key)
 
@@ -36,6 +36,8 @@ class Client:
         encrypted_initialize_vector = str(RSA.encrypt(number_initialize_vector, self.server_open_key))
         self.client.send(encrypted_initialize_vector.encode('utf-8'))
 
+    def send_message_to_server(self):
+        self.key_exchange()
         message = input('Enter message: ')
         encrypted_message = AES.encrypy_message(message, self.key, self.initialize_vector)
         self.client.send(encrypted_message.encode('utf-8'))
