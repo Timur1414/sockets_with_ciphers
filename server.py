@@ -1,70 +1,73 @@
 import pickle
 import socket
-import ciphers.aes as aes
-import ciphers.rsa as rsa
+from ciphers.aes import AES
+from ciphers.rsa import RSA
 
-def encrypt_message_to_client(text: str, key: str, initialization_vector: str):
-    text = [ord(i) for i in text]
-    key = [ord(i) for i in key]
-    initialization_vector = [ord(i) for i in initialization_vector]
-    if len(initialization_vector) < 16:  # заполнение до 16 байт
-        empty_spaces = 16 - len(initialization_vector)
-        for i in range(empty_spaces):
-            initialization_vector.append(1)
-    encrypted_data = aes.CBC_encrypt(text, key, initialization_vector)
-    encrypted_data = ''.join(chr(i) for i in encrypted_data)
-    return encrypted_data
 
-def decrypt_message_from_client(data: str, key: str, initialization_vector: str):
-    data = [ord(i) for i in data]
-    key = [ord(i) for i in key]
-    initialization_vector = [ord(i) for i in initialization_vector]
-    if len(initialization_vector) < 16:  # заполнение до 16 байт
-        empty_spaces = 16 - len(initialization_vector)
-        for i in range(empty_spaces):
-            initialization_vector.append(1)
-    decrypted_data = aes.CBC_decrypt(data, key, initialization_vector)
-    decrypted_data = ''.join(chr(i) for i in decrypted_data if i >= 32)
-    return decrypted_data
+class Server:
+    def __init__(self, host: str = '127.0.0.1', port: int = 8888, buf_size: int = 1024):
+        self.server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.host = host
+        self.port = port
+        self.server.bind((self.host, self.port))
+        self.server.listen()
+        self.buf_size = buf_size
+        print('Server Listening')
+        self.open_key = None
+        self.close_key = None
+
+        self.address = None
+        self.connection = None
+        self.client_key = None
+        self.client_initialize_vector = None
+
+    def generate_keys(self):
+        self.open_key, self.close_key = RSA.generate_keys()
+
+    def recv_bytes(self) -> int:
+        data = self.connection.recv(self.buf_size)
+        message = int(data.decode('utf-8'))
+        return message
+
+    def key_exchange(self):
+        serialized_open_key = pickle.dumps(self.open_key)
+        self.connection.send(serialized_open_key)
+
+        message = self.recv_bytes()
+        number_key = RSA.decrypt(message, self.close_key)
+        bytes_key = number_key.to_bytes((number_key.bit_length() + 7) // 8, 'big')
+        self.client_key = bytes_key.decode('utf-8')
+        print(f'key: {self.client_key}')
+        message = self.recv_bytes()
+        number_initialize_vector = RSA.decrypt(message, self.close_key)
+        bytes_initialize_vector = number_initialize_vector.to_bytes((number_initialize_vector.bit_length() + 7) // 8,
+                                                                    'big')
+        self.client_initialize_vector = bytes_initialize_vector.decode('utf-8')
+
+    def get_message_from_client(self) -> str:
+        self.connection, self.address = self.server.accept()
+        self.key_exchange()
+        data = self.connection.recv(self.buf_size)
+        message = data.decode('utf-8')
+        decrypted_message = AES.decrypt_message(message, self.client_key, self.client_initialize_vector)
+        print(f'Client {self.address} sent "{decrypted_message}"')
+        return decrypted_message
+
+
+    def send_message_to_client(self, message: str):
+        encrypted_message = AES.encrypy_message(message, self.client_key, self.client_initialize_vector)
+        self.connection.send(encrypted_message.encode('utf-8'))
+        self.connection.close()
+        self.server.close()
 
 
 def main():
-    server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    host = '127.0.0.1'
-    port = 8888
-    server.bind((host, port))
-    server.listen()
-    print('Server Listening')
+    server = Server()
+    server.generate_keys()
 
-    open_key, close_key = rsa.generate_keys()
-    buf_size = 1024
-
-    connection, address = server.accept()
-    serialized_open_key = pickle.dumps(open_key)
-    connection.send(serialized_open_key)
-
-    data = connection.recv(buf_size)
-    message = int(data.decode('utf-8'))
-    number_key = rsa.decrypt(message, close_key)
-    bytes_key = number_key.to_bytes((number_key.bit_length() + 7) // 8, 'big')
-    key = bytes_key.decode('utf-8')
-    print(f'key: {key}')
-    data = connection.recv(buf_size)
-    message = int(data.decode('utf-8'))
-    number_initialize_vector = rsa.decrypt(message, close_key)
-    bytes_initialize_vector = number_initialize_vector.to_bytes((number_initialize_vector.bit_length() + 7) // 8, 'big')
-    initialize_vector = bytes_initialize_vector.decode('utf-8')
-
-    data = connection.recv(buf_size)
-    message = data.decode('utf-8')
-    decrypted_message = decrypt_message_from_client(message, key, initialize_vector)
-    print(f'Client {address} sent "{decrypted_message}"')
-    message = f'your message is "{decrypted_message}"'
-    encrypted_message = encrypt_message_to_client(message, key, initialize_vector)
-    connection.send(encrypted_message.encode('utf-8'))
-    connection.close()
-
-    server.close()
+    message = server.get_message_from_client()
+    message = f'your message is "{message}"'
+    server.send_message_to_client(message)
 
 
 if __name__ == '__main__':
