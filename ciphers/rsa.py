@@ -9,8 +9,7 @@ class RSA:
     def __gcd_extended(a, b):
         if a == 0:
             return b, 0, 1
-        else:
-            div, x, y = RSA.__gcd_extended(b % a, a)
+        div, x, y = RSA.__gcd_extended(b % a, a)
         return div, y - (b // a) * x, x
 
     @staticmethod
@@ -22,7 +21,7 @@ class RSA:
         e = 2
         while gcd(e, f) != 1:
             e += 1
-        div, x, y = RSA.__gcd_extended(e, f)
+        _, x, _ = RSA.__gcd_extended(e, f)
         d = x % f
         print(f'Open key: ({e}, {n})')
         print(f'Close key: ({d}, {n})')

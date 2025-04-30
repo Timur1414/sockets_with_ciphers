@@ -52,7 +52,7 @@ class AES:
     @staticmethod
     def __mul_by_02(num: int) -> int:
         if num < 0x80:
-            res = (num << 1)
+            res = num << 1
         else:
             res = (num << 1) ^ 0x1b
         return res % 0x100
